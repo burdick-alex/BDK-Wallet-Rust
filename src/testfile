@@ -1,0 +1,96 @@
+use bdk::{FeeRate, Wallet,SyncOptions};
+use bdk::database::MemoryDatabase;
+use bdk::wallet::AddressIndex::New;
+use bdk::bitcoin::Network::Testnet;
+use bdk::descriptor::Descriptor;
+use bdk::descriptor::{Descriptor::script_pubkey};
+use bdk::keys;
+use bitcoin::util::bip32::ExtendedPrivKey;
+
+use bitcoin::consensus::serialize;
+use bdk::bitcoin::Address;
+use std::str::FromStr;
+use bdk::SignOptions;
+use bdk::bitcoin::util::address::Error;
+use bdk::blockchain::ElectrumBlockchain;
+use bdk::electrum_client::Client;
+
+// use secp256k1::{rand, KeyPair, Secp256k1};
+use secp256k1::{
+    rand::{rngs, SeedableRng},
+    PublicKey, SecretKey,
+};
+
+
+pub fn generate_keypair() -> (SecretKey, PublicKey) {
+    let secp = secp256k1::Secp256k1::new();
+    let mut rng = rngs::StdRng::seed_from_u64(111);
+    secp.generate_keypair(&mut rng)
+}
+
+fn main() -> Result<(), bdk::Error> {
+
+    let k = bdk::keys::test_networks();
+
+    let client = Client::new("ssl://electrum.blockstream.info:60002")?;
+    let blockchain = ElectrumBlockchain::from(client); 
+
+    let (secret_key, pub_key) = generate_keypair();
+    println!("secret key: {}", &secret_key.to_string());
+    println!("public key: {}", &pub_key.to_string());
+
+    //let descript = Descriptor::new(pub_key);
+    //let descript = &("wpkh([c258d2e4/84h/1h/0h]tpub".to_owned() + &pub_key.to_string() + "/0/*)");
+    let descript = &("wpkh(".to_owned() + &pub_key.to_string() + ")");
+    println!("public key: {}", descript);
+    // let wallet = Wallet::new(
+    //     "wpkh([c258d2e4/84h/1h/0h]tpubDDYkZojQFQjht8Tm4jsS3iuEmKjTiEGjG6KnuFNKKJb5A6ZUCUZKdvLdSDWofKi4ToRCwb9poe1XdqfUnP4jaJjCB2Zwv11ZLgSbnZSNecE/0/*)",
+    //     Some("wpkh([c258d2e4/84h/1h/0h]tpubDDYkZojQFQjht8Tm4jsS3iuEmKjTiEGjG6KnuFNKKJb5A6ZUCUZKdvLdSDWofKi4ToRCwb9poe1XdqfUnP4jaJjCB2Zwv11ZLgSbnZSNecE/1/*)"),
+    //     bdk::bitcoin::Network::Testnet,
+    //     MemoryDatabase::default(),
+    // )?;
+
+    let wallet = Wallet::new(
+        descript,
+        Some(descript),
+        bdk::bitcoin::Network::Testnet,
+        MemoryDatabase::default(),
+    )?;
+
+    wallet.sync(&blockchain, SyncOptions::default())?;
+
+    println!("Descriptor balance: {} SAT", wallet.get_balance()?);
+
+
+    //let send_to = wallet.get_address(New)?;
+    let faucet_address = Address::from_str("mkHS9ne12qx9pS9VojpwU5xtRd4T7X7ZUt");
+    let send_to = Descriptor::from_str("2Mt16k3q1CCHPvkFUTnjCBgqYL9sPvF1V7j")?;
+    //println!("Descriptor balance: {} SAT",send_to.script_pubkey());
+    let a = send_to.script_pubkey();
+    let b = faucet_address.script_pubkey();
+    // let mut tx_builder = wallet.build_tx();
+    // tx_builder
+    //     .add_recipient(send_to.script_pubkey(), 2000)
+    //     .enable_rbf()
+    //     .do_not_spend_change();
+    // tx_builder.finish()?;
+
+    // let (mut psbt, tx_details) = tx_builder.finish()?;
+
+    // println!("Transaction details: {:#?}", tx_details);
+
+    // let finalized = wallet.sign(&mut psbt, SignOptions::default())?;
+
+    wallet.sync(&blockchain, SyncOptions::default())?;
+
+    //let ad = wallet.get_address(New)?;
+    println!("Descriptor balance: {} SAT", wallet.get_balance()?);
+    // println!("Address #0: {}", wallet.get_internal_address(New)?);
+    // println!("Address #1: {}", wallet.get_address(New)?);
+    // println!("Address #2: {}", wallet.get_address(New)?);
+
+    Ok(())
+}
+
+
+

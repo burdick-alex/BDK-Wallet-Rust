@@ -1,1 +1,1 @@
-# BDK-Wallet-Rust
+# BDK-Rust-Wallet

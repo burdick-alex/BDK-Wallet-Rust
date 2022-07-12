@@ -1,0 +1,7 @@
+1.Copy seed phrase to .env
+
+2. Run the commands below:
+set -a
+. ./env.txt
+set +a
+
